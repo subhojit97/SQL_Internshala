@@ -1,0 +1,117 @@
+create table matches(
+id int,
+city varchar(255),
+date_ date,
+player_of_match varchar(255),
+venue varchar(255),
+neutral_venue int,
+team1 varchar(255),
+team2 varchar(255),
+toss_winner varchar(255),
+toss_decision varchar(255),
+winner varchar(255),
+result_ varchar(255),
+result_margin int,
+eliminator varchar(255),
+method_ varchar(255),
+umpire1 varchar(255),
+umpire2 varchar(255));
+
+
+create table deliveries(
+id int,
+inning int,
+over_ int,
+ball int,
+batsman varchar(255),
+non_striker varchar(255),
+bowler varchar(255),
+batsman_runs int,
+extra_runs int,
+total_runs int,
+is_wicket int,
+dismissal_kind varchar(255),
+player_dismissed varchar(255),
+fielder varchar(255),
+extras_type varchar(255),
+batting_team varchar(255),
+bowling_team varchar(255) );
+
+copy matches from 'C:\Users\SU20181941\Downloads\Data_For_Final_ProjectIPLMatches_IPLBall\IPLMatches+IPLBall\IPL_matches.csv' delimiter ',' csv header;
+
+copy deliveries from 'C:\Users\SU20181941\Downloads\Data_For_Final_ProjectIPLMatches_IPLBall\IPLMatches+IPLBall\IPL_Ball.csv' delimiter ',' csv header;
+
+
+select * from deliveries order by id Limit 20;
+select * from deliveries order by inning limit 20;
+select * from deliveries order by over_ limit 20;
+select * from deliveries order by ball limit 20;
+
+select * from matches Limit 20 ;
+
+select * from matches where date_ in('02-05-2013');
+select * from matches where result_='runs' and result_margin>100;
+select * from matches where result_='tie' order by date_ desc;
+select count(distinct city) from matches;
+
+create table deliveries_v02_1 as select *,case when total_runs>=4 then 'boundary'
+when total_runs=0 then 'dot'
+else 'other' end as ball_result1 from deliveries;
+
+select ball_result,case when ball_result='boundary' then count(*)
+when ball_result='dot' then count(*)
+else count(*) end as result_count from deliveries_v02 group by ball_result;
+
+
+select distinct batting_team,case when ball_result='boundary' then count(*)
+end as boundary_count from deliveries_v02 group by batting_team order by boundary_count desc;
+
+select distinct bowling_team,case when ball_result='dot' then count(*)
+end as dot_count from deliveries_v02 group by bowling_team order by dot_count desc;
+
+select distinct dismissal_kind,count(*) from deliveries where  not dismissal_kind='NA' group by dismissal_kind;
+
+select distinct bowler,sum(extra_runs) as total_extra from deliveries where  not extra_runs=0 group by bowler order by total_extra desc limit 5;
+
+select distinct bowler,count(extra_runs) as total_extra from deliveries where  not extra_runs=0 group by bowler order by total_extra desc limit 5;
+
+create table deliveries_v03 as select a.*,b.venue,b.date_ from deliveries_v02 as a inner join matches as b on a.id=b.id;
+
+select distinct venue,sum(total_runs) as total_runs_sum from deliveries_v03 group by venue order by total_runs_sum desc;
+
+select extract(year from date_) as year_ex,sum(total_runs) as total_runs_sum_eden from deliveries_v03 where venue in('Eden Gardens') group by year_ex 
+order by total_runs_sum_eden desc;
+
+create table matches_corrected as select *,case when team1='Rising Pune Supergiants' then 'Rising Pune Supergiant'
+else team1 end as team1_corr,case when team2='Rising Pune Supergiants' then 'Rising Pune Supergiant'
+else team2 end as team2_corr from matches;
+
+create table deliveries_v04 as select TO_CHAR(id,'999999')||'-'||TO_CHAR(inning,'999999')||'-'||TO_CHAR(over_,'999999')||'-'||TO_CHAR(ball,'999999'),* 
+as ball_id from deliveries_v03;
+
+select count(*),count(distinct ball_id) from deliveries_v04;
+
+create table deliveries_v05 as select *,ROW_NUMBER() over (partition by ball_id) as r_num from deliveries_v04;
+
+select * from deliveries_v05 WHERE r_num=2;
+
+SELECT * FROM deliveries_v05 WHERE ball_id in (select BALL_ID from deliveries_v05 WHERE r_num=2);
+
+select ball_result,count(*) from deliveries_v02 group by ball_result;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
